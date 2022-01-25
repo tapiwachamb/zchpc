@@ -277,6 +277,51 @@ Do steps xvii-xxi (129-130) on client machines as well
 
 132.) lscpu
 
+133.) make <filename>
+./<filename>
+
+134.)
+
+#include<mpi.h> // loading mip library
+#include<stdio.h> // c library
+
+int main(int argc,char**argv){
+    
+
+    MIP_Init(NULL,NULL); // intialise MIP ENVIRONMENT
+
+    // NUMBER OF Processes
+
+    int world_size; // variable
+
+    MIP_Comm_size(MIP_COMM_WORLD, &world_size);
+
+    // rank 
+
+    int world_rank;
+
+    MIP_Comm_rank(MIP_COMM_WORLD, &world_rank);
+
+    // processor name
+
+    char processor_name[MIP_MAX_PROCESSOR_NAME];
+
+    int name_len; // variable created
+
+    MIP_Get_processor_name(processor_name, &name_len);
+
+
+
+    //////////////////////////////////////////////////////////////////////////
+
+    printf("Hello world from processor %d, rank %d out of %d processors\n",processor_name,world_rank,world_size)
+
+
+    MIP_Finalize();
+
+}
+
+
 
 
 
