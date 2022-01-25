@@ -1,0 +1,295 @@
+1.) hostnamectl set-hostname compute1                 (Assigning hostname) / (vi /etc/hosts)
+2.) hostname                                          (Verify hostname)
+    vi /etc/hosts
+( DO THIS ON ALL NODES
+  192.168.0.1 management
+  192.168.0.2 compute1
+  192.168.0.3 compute2
+)
+3.) systemctl stop firewalld                          (Stop Firewall)
+>>> systemctl status firewalld
+>>> systemctl disable firewalld                       (PERMANENT ON REBOOT)
+4.) vi /etc/sysconfig/selinux
+( DO THIS ON ALL NODES
+  SELINUX = disabled
+)
+5.) cd /etc/sysconfig/network-scripts 
+>>> vi ifcfg-ens33
+( DO THIS ON ALL NODES
+  BOOTPRONTO=static
+  IPADDR= 192.168.0.1/2/3
+  ONBOOT=yes
+  NETMASK= 255.255.255.0
+)
+6.) *** service network restart                            (Restart network so that the system picks the changes)
+7.) ip a s                                             (Check the IP Address) 
+8.) yum -y install rsh rsh-server                      (Install RSH)
+9.) systemctl restart rsh.socket                       (Restart the server daemons)
+10.) systemctl restart rlogin.socket 
+11.) systemctl restart rexec.socket
+12.) systemctl enable rsh.socket                       (Enable RSH automatically at system startup) (PERMANENT ON REBOOT)
+13.) systemctl enable rlogin.socket                    (PERMANENT ON REBOOT)
+14.) systemctl enable rexec.socket                     (PERMANENT ON REBOOT)
+<<< Do not edit the line containing 127.0.0.1, it will bring negative influence on the normal work of NIS
+vi /etc/hosts
+15.) vi /etc/rhosts.equiv                                 (Remote execution is controlled by the following two files, edit them by adding the hostnames of the machines on the network whose users are allowed access)
+( When in management -> do this for all
+   compute1
+   compute2
+)
+16.) vi /root/.rhosts
+( When in management
+   compute1
+   compute2
+)
+17.) vi /etc/securetty                                 (Enable external root user to execute commands)
+ADD >>>
+( Do this for all
+  rsh 
+  rexec 
+  rlogin
+)
+18.) rpm –qa |grep openssh                             (rpm -qa |grep openssh - check if ssh is installed)
+19.) sudo yum –y install openssh-server openssh-clients openssh-libs                (Install OpenSSH Server Software Package)
+20.) sudo systemctl start sshd                         (start ssh daemon)
+21.) sudo systemctl status sshd                        (Check the status)
+22.) sudo systemctl enable sshd                        (Enable to start automatically) (PERMANENT ON REBOOT)
+23.) ssh-keygen                                        (Setting up SSH passwordless login)
+24.) ls -al ~/.ssh/                                    (List the contents of ~/.ssh directory you will find id_rsa and id_rsa.pub)
+25.) ssh-copy-id -i ~/.ssh/id_rsa.pub root@compute1
+26.) ssh root@compute1                                 (Check if successful)
+27.) yum install -y nfs-utils                          (Install NFS Server)
+28.) systemctl start nfs-server rpcbind                (After installing the packages enable and start NFS services)
+29.) systemctl enable nfs-server rpcbind               (PERMANENT ON REBOOT)
+30.) vi /etc/exports
+ADD >>> 
+( DO THIS ON ALL
+/home *(rw,insecure,no_root_squash,sync)
+)
+32.) systemctl restart nfs-server
+33.) exportfs
+34.) yum install -y nfs-utils                          (Install NFS packages)
+35.) sytemctl stop firewalld
+36.) systemctl start nfs-server rpcbind 
+37.) systemctl enable nfs-server rpcbind               (PERMANENT ON REBOOT)
+CLIENT-NODE
+38.) showmount -e 192.168.0.1                          (Check if NFS is available)
+39.) Export list for 192.168.0.1                       (/home* is the output)
+40.) mkdir /mnt/home                                   (Create a directory on NFS client to mount the NFS share /home directory)
+41.) mount 192.168.0.1:/home /mnt/home
+42.) mount | grep nfs                                  (Output ssunrpc on /var/lib/nfs/rpc_pipefs type rpc_pipefs (rw,relatime) nfsd on /proc/fs/nfsd type nfsd (rw,relatime) 192.168.1.10:/home on /mnt/home type nfs4 (rw,relatime,vers=4.1,rsize=131072,wsize=131072,namlen=255,hard,proto=tcp,port=0,timeo=600,retrans=2,sec=sys,clientaddr=192.168.0.2,local_lock=none,addr=192.168.0.1)
+43.) df –hT                                            (CLIENT-NODE)SSH 
+44.) touch /mnt/home/test.txt
+CHECK SERVER-NODE
+45.) ls -l /home/
+46.) vi /etc/fstab                                     (CLIENT-NODE PERMANENT MOUNT ON REBOOT)
+ADD THE FOLLOWING (# # /etc/fstab # Created by anaconda on Wed Jan 17 12:04:02 2018 # # Accessible filesystems, by reference, are maintained under '/dev/disk' # See man pages fstab(5), findfs(8), mount(8) and/or blkid(8) for more info # /dev/mapper/centos-root / xfs defaults 0 0 UUID=60a496d0-69f4-4355-aef0-c31d688dda1b /boot xfs defaults 0 0 /dev/mapper/centos-home /home xfs defaults 0 0 /dev/mapper/centos-swap swap swap defaults 0 
+192.168.0.1:/home /mnt/home nfs nosuid,rw,sync,hard,intr 0 0)
+47.) mount                                             (CLIENT-NODE)
+CONFIGURING NIS SERVICE
+48.) yum -y install ypserv rpcbind cach nfs make ypbind portmap xinetd
+          (Check)
+50.) rpm –qa ypserv                                    (Check them if not found then install)
+51.)  vi /etc/sysconfig/network
+ADD the following 
+( NETWORKING=yes
+NETWORKING_IPV6=no
+HOSTNAME=management
+NISDOMAIN=zchpc
+)
+52.) vi /var/yp/securenets 
+ADD IP ADDRESSES you allow access to NIS Server 
+(
+255.0.0.0             127.0.0.0 
+255.255.255.0         192.168.0.0
+255.255.255.0         192.168.0.1
+255.255.255.0         192.168.0.2
+255.255.255.0         192.168.0.3
+)
+53.) systemctl start rpcbind ypserv ypxfrd yppasswdd
+54.) systemctl enable rpcbind ypserv ypxfrd yppasswdd
+55.) rpcinfo -u management ypserv                       (Check whether ypserv starts)
+56.) /usr/lib64/yp/ypinit –m                            (Update NIS database)SS
+(
+  next host to add: management
+  next host to add: compute1
+  next host to add: compute2
+)
+AFTER THAT Ctrl + D
+AGREE y
+57.) cd /var/yp                                         (If you add a user on the management server you should be able to see them on the client servers. To enable this run the make command in the /var/yp directory)
+58.) make 
+59.) Install These                                      (yp-tools ,ypbind , ypserv and rpcbind)
+CLIENT-NODES
+60.) vi  /etc/sysconfig/network
+ADD >>>
+(
+ NISDOMAIN=zchpc                                 (CLIENT-NODE)
+)
+61.) vi /etc/yp.conf                                    (CLIENT-NODE)
+ADD >>> Domain name  zchpc  ,Server  management  （ip or name of server-side) (CLIENT-NODE)
+Switch-on Selinux (vi /etc/sysconfig/selinux)
+CLIENT-NODE
+authconfig --enablenis --nisdomain=zchpc --nisserver=management --enablemkhomedir --update
+
+authconfig \
+--enablenis \
+--nisdomain=zchpc \
+--nisserver=management \
+--enablemkhomedir \
+--update
+62.) systemctl start ypbind  
+63.) systemctl start  rpcbind
+64.) cd /usr/lib64/yp
+65.) ./ypinit –s management
+66.) tail -f /var/log/messages
+
+Installing TORQUE
+
+67.) yum install epel-release
+68.) yum -y install libtool openssl-devel libxml2-devel  boost-devel  gcc gcc-c++ git
+69.) git clone https://github.com/adaptivecomputing/torque.git -b 6.0.1 6.0.1
+70.) cd 6.0.1
+71.) ./autogen.sh
+72.) ./configure 
+73.) make
+74.) make install
+75.) echo “managment” > /var/spool/torque/server_name     (Make sure Torque is using server hostname (management)
+76.) echo "/usr/local/lib" > /etc/ld.so.conf.d/torque.conf
+77.) ldconfig
+78.) vi /var/spool/torque/server_priv/nodes               (eg compute1   np=2, compute2   np=2)
+Start the trqauthd daemon:    {{{{Make sure you are in the working directory 6.0.1}}}
+79.) cp contrib/systemd/trqauthd.service   /usr/lib/systemd/system/
+80.) systemctl enable trqauthd.service
+81.) systemctl start trqauthd.service
+Initialize torque serverdb:
+82.) ./torque.setup root
+83.) qterm
+Start pbs_server:
+84.) cp contrib/systemd/pbs_server.service   /usr/lib/systemd/system/
+85.) systemctl enable pbs_server.service
+86.) systemctl start pbs_server.service
+87.) cp contrib/systemd/pbs_sched.service  /usr/lib/systemd/system/  (On the mgt node, copy the scheduler service file to the correct location:)
+88.) systemctl enable pbs_sched.service (Enable and start the scheduler:
+89.) systemctl start pbs_sched.service
+90.) make packages                             (Make Client (Compute Node) Packages)
+From mgt node Copy contrib/systemd/pbs_mom.service to /usr/lib/systemd/system/ on all compute nodes
+91.) scp contrib/systemd/pbs_mom.service root@compute1:/usr/lib/systemd/system/
+scp contrib/systemd/pbs_mom.service root@compute2:/usr/lib/systemd/system/
+>>>Install torque-package-mom-linux-x86_64.sh and torque-package-clients-linux-x86_64.sh to all compute nodes
+92.) scp torque-package-mom-linux-x86_64.sh root@compute1:/opt
+scp torque-package-mom-linux-x86_64.sh root@compute2:/opt
+93.) scp torque-package-clients-linux-x86_64.sh root@computeX:/opt
+scp torque-package-clients-linux-x86_64.sh root@compute2:/opt
+CLIENT-NODEs
+>>> cd /opt
+94.) ./torque-package-mom-linux-x86_64.sh --install
+95.) ./torque-package-clients-linux-x86_64.sh --install
+96.) scp root@mgt:/etc/ld.so.conf.d/torque.conf / /etc/ld.so.conf.d/
+97.) ldconfig
+98.) echo “management” > /var/spool/torque/server_name
+99.) systemctl enable pbs_mom.service
+100.) systemctl start pbs_mom.service
+>>> REPEAT FOR ALL NODES
+101.) vi /usr/lib/systemd/system/httpd.service         (Enter  ->>>    PrivateTmp=false)
+102.) sudo systemctl daemon-reload
+103.) sudo systemctl restart httpd
+104.) pbsnodes -a                   (Make sure you are running this from the management node, it should show all the nodes and their states)
+105.) echo "date" | qsub
+ll
+cat STDIN.o20
+106.) qstat
+>>> GANGLIA SETUP
+SERVER-NODE >>> (yum install ganglia ganglia-gmetad ganglia-web ganglia-gmond)
+CLIENT-NODES >>> (yum install ganglia ganglia-gmond)
+107.) vi /etc/ganglia/gmetad.conf   (Edit the data_source line so that it looks like this  >>> data_source  “my_cluster"    192.168.0.1:8649)
+DO THIS FOR ALL
+108.) vi /etc/ganglia/gmond.conf
+
+cluster {
+  name = “my_cluster"
+  owner = "unspecified"
+  latlong = "unspecified"
+  url = "unspecified"
+}
+udp_send_channel {
+  #mcast_join = 239.2.11.71
+  host = 192.168.0.1
+  port = 8649
+  ttl = 1
+}
+udp_recv_channel {
+  #mcast_join = 239.2.11.71
+  port = 8649
+  #bind = 239.2.11.71
+}
+tcp_accept_channel {
+  port = 8649
+}
+
+109.) SERVER-NODE
+Restart httpd:	systemctl start httpd
+                systemctl enable httpd
+Start gmond: 	systemctl start gmond
+                systemctl enable gmond
+Start gmetad: 	systemctl start gmetad
+                systemctl enable gmetad
+
+110.) CLIENT-NODES
+Start gmond: 	systemctl start gmond
+                systemctl enable gmond
+111.) SERVER-NODE
+vi /etc/httpd/conf.d/ganglia.conf                          (Comment everything and add >>> Require all granted)
+112.) http://192.168.0.1/ganglia
+
+MULTIPROCESSING 
+
+Step 6: Set-up MPI
+Download and install on Central MANAGEMENT NODE
+113.) wget http://www.mpich.org/static/downloads/3.1.4/mpich-3.1.4.tar.gz
+114.) yum install gcc gcc-c++ kernel-devel -y
+115.) tar xvf mpich-3.1.4.tar.gz
+116.) mkdir mpich2
+117.) cd mpich-3.1.4
+118.) ./configure --prefix=/nfsshare/mpich2 --disable-fortran
+119.) make
+120.) make install
+121.) ls
+122.) cd ../
+123.) ls
+
+
+124.) cd mpich2/
+125.) ls
+126.) cd bin/
+127.) ls
+128.) cd ../
+129.) vi ~/.bashrc
+Add the following 2-lines
+(
+“export PATH=/nfsshare/mpich2/bin:$PATH”
+“export LD_LIBRARY_PATH=“nfsshare/mpich2/lib:$LD_LIBRARY_PATH””
+)
+130.) source ~/.bashrc
+Do steps xvii-xxi (129-130) on client machines as well
+131.) mpirun
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+
