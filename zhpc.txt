@@ -275,6 +275,8 @@ Do steps xvii-xxi (129-130) on client machines as well
 131.) mpirun
 
 
+132.) lscpu
+
 
 
 
