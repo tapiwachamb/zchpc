@@ -318,6 +318,7 @@ int main(int argc,char**argv){
 
 
     MIP_Finalize();
+    return 0;
 
 }
 
